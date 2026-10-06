@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.18)
+project(ssao CXX)
+add_library(ssao SHARED ssao.cpp)
+target_compile_options(ssao PRIVATE -O2 -fno-exceptions -fno-rtti -fvisibility=hidden)
+target_link_libraries(ssao log dl EGL GLESv2)
