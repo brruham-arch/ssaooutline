@@ -40,7 +40,7 @@ static PFN_Clear o_Clear;   static PFN_Swap o_Swap;
 static int (*pDobbyHook)(void*, void*, void**);
 
 // ---- state ----
-static const int MAXN = 32;
+static const int MAXN = 512;
 static GLuint rec[MAXN * 4]; static int nrec = 0;
 static int frame = 0, phase = 0, scrW = 0, scrH = 0, rbFmt = 0, nT = 0, shaderSt = 0;
 static GLuint tfbo[32], tatt[32], trb[32], depthTex[32]; static int tw[32], th[32];
@@ -92,7 +92,7 @@ static bool doAttach() {
                     tfbo[n] = f; tatt[n] = a; trb[n] = r;
                     glGetRenderbufferParameteriv(GL_RENDERBUFFER, 0x8D42, &u); tw[n] = u;
                     glGetRenderbufferParameteriv(GL_RENDERBUFFER, 0x8D43, &u); th[n] = u;
-                    n++;
+                    if (tw[n] >= 64 && th[n] >= 64) n++;
                 }
             }
         }
