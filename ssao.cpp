@@ -255,7 +255,6 @@ static void build() {
 }
 
 #include "fx.h"
-#include "bloom.h"
 static const GLenum CAPS[5] = { GL_DEPTH_TEST, GL_BLEND, GL_CULL_FACE, GL_SCISSOR_TEST, GL_STENCIL_TEST };
 
 static void drawAO(GLuint dst) {
@@ -305,7 +304,6 @@ static void drawAO(GLuint dst) {
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     fxDraw();
-    bloomDraw(dst);
     if (oAttr == 0) glDisableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, oBuf);
     glBindTexture(GL_TEXTURE_2D, oTex);
