@@ -43,7 +43,7 @@ static int (*pDobbyHook)(void*, void*, void**);
 static const int MAXN = 32;
 static GLuint rec[MAXN * 4]; static int nrec = 0;
 static int frame = 0, phase = 0, scrW = 0, scrH = 0, rbFmt = 0, nT = 0, shaderSt = 0;
-static GLuint tfbo[8], tatt[8], trb[8], depthTex[8]; static int tw[8], th[8];
+static GLuint tfbo[32], tatt[32], trb[32], depthTex[32]; static int tw[32], th[32];
 static bool depthCleared = false, composited = false, everActive = false, busy = false, hooksDone = false;
 static GLuint curFb = 0;
 static void* curCtx = nullptr;
@@ -80,7 +80,7 @@ static bool doAttach() {
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldTex);
     int n = 0; GLint fmt0 = 0;
     for (int i = 0; i < nrec; i++) {
-        if (rec[i*4] != 2 || n >= 8) continue;
+        if (rec[i*4] != 2 || n >= 32) continue;
         GLuint f = rec[i*4+1], a = rec[i*4+2], r = rec[i*4+3];
         if (f && r && glIsFramebuffer(f) && glIsRenderbuffer(r)) {
             glBindRenderbuffer(GL_RENDERBUFFER, r);
@@ -99,6 +99,7 @@ static bool doAttach() {
     }
     glBindRenderbuffer(GL_RENDERBUFFER, oldRb);
     nT = n;
+    for (int i = 1, b = 0; i < n; i++) { if (tw[i]*th[i] > tw[b]*th[b]) b = i; if (i == n-1 && b > 0) { GLuint x; int y; x=tfbo[0];tfbo[0]=tfbo[b];tfbo[b]=x; x=tatt[0];tatt[0]=tatt[b];tatt[b]=x; x=trb[0];trb[0]=trb[b];trb[b]=x; y=tw[0];tw[0]=tw[b];tw[b]=y; y=th[0];th[0]=th[b];th[b]=y; } }
     if (n == 0) return false;
     rbFmt = fmt0; scrW = tw[0]; scrH = th[0];
     GLint ifmt = fmt0; GLenum typ = (fmt0 == 0x81A6) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
@@ -330,14 +331,14 @@ static void h_FbRb(GLenum t, GLenum a, GLenum rbt, GLuint rb) {
     o_FbRb(t, a, rbt, rb);
 }
 static void h_Clear(GLbitfield m) {
-    GLint f = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &f); if ((m & GL_DEPTH_BUFFER_BIT) && isTarget((GLuint)f)) depthCleared = true;
+    GLint f = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &f); if ((m & GL_DEPTH_BUFFER_BIT) && nT > 0 && (GLuint)f == tfbo[0]) depthCleared = true;
     { static int cn = 0; if ((m & GL_DEPTH_BUFFER_BIT) && cn < 30 && phase == 1) { cn++; slog("clear depth fbo=%d tgt=%d", f, (int)isTarget((GLuint)f)); } }
     o_Clear(m);
 }
 static void h_BindFB(GLenum t, GLuint f) {
     if (!busy && t == GL_FRAMEBUFFER && f != curFb) {
         GLuint prev = curFb; curFb = f;
-        if (phase == 1 && depthCleared && !composited && isTarget(prev) && !isTarget(f)) {
+        if (phase == 1 && depthCleared && !composited && nT > 0 && prev == tfbo[0] && f != tfbo[0]) {
             composited = true; runAO(prev);
         }
     }
