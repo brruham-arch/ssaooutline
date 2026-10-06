@@ -328,7 +328,7 @@ static void h_FbRb(GLenum t, GLenum a, GLenum rbt, GLuint rb) {
     o_FbRb(t, a, rbt, rb);
 }
 static void h_Clear(GLbitfield m) {
-    if ((m & GL_DEPTH_BUFFER_BIT) && isTarget(curFb)) depthCleared = true;
+    GLint f = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &f); if ((m & GL_DEPTH_BUFFER_BIT) && isTarget((GLuint)f)) depthCleared = true;
     o_Clear(m);
 }
 static void h_BindFB(GLenum t, GLuint f) {
@@ -343,7 +343,7 @@ static void h_BindFB(GLenum t, GLuint f) {
 
 static void* hGLES = nullptr; static void* hEGL = nullptr;
 static bool hookFn(const char* name, void* repl, void** orig, void* lib) {
-    void* a = dlsym(lib, name); if (a) a = (void*)((uintptr_t)a | 1);
+    void* a = dlsym(lib, name);
     if (!a) { slog("sym tidak ada: %s", name); return false; }
     if (pDobbyHook(a, repl, orig) != 0) { slog("DobbyHook gagal: %s", name); return false; }
     return true;
@@ -356,7 +356,6 @@ static void installHooks() {
     GLint u = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &u); curFb = u;
     // o_BindFB dipakai sebelum hook terpasang: isi dulu dari dlsym
     o_BindFB = (PFN_BindFB)dlsym(hGLES, "glBindFramebuffer");
-    hookFn("glBindFramebuffer", (void*)h_BindFB, (void**)&o_BindFB, hGLES);
     slog("installHooks selesai");
 }
 
