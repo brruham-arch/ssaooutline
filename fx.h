@@ -83,7 +83,8 @@ static void fxDraw() {
     bool cOn = fOn || fabsf(P.SATURATION - 1.0f) > 0.001f || fabsf(P.CONTRAST - 1.0f) > 0.001f
             || P.VIG_STRENGTH > 0.001f || P.EXPOSURE < 0.999f
             || P.TINT_R < 0.999f || P.TINT_G < 0.999f || P.TINT_B < 0.999f;
-    bool bOn = P.BLOOM_INT > 0.001f;
+    bool bOn = P.EN_BLOOM && P.BLOOM_INT > 0.001f;
+    if (!P.EN_FX) { cOn = false; fOn = false; }
     if ((!cOn && !bOn) || fxErr >= 3) return;
     void* c = eglGetCurrentContext();
     if (c != fxCtx) { fxCtx = c; fxSt = 0; cTex = 0; blTex[0] = blTex[1] = 0; blFbo[0] = blFbo[1] = 0; cW = cH = 0; fxErr = 0; }

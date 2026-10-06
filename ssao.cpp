@@ -28,6 +28,7 @@ struct Params {
           EDGE_T, EDGE_S, EDGE_W, EDGE_FADE0, EDGE_FADE1;
     int FALLBACK_SWAP;
     float FOG_DENSITY, FOG_START, FOG_END, FOG_R, FOG_G, FOG_B, VIG_STRENGTH, VIG_SOFT, EXPOSURE, TINT_R, TINT_G, TINT_B, SATURATION, CONTRAST, BLOOM_THR, BLOOM_INT, BLOOM_RADIUS;
+    int EN_ALL, EN_AO, EN_FX, EN_BLOOM;
 };
 static Params P;
 
@@ -276,7 +277,7 @@ static void drawAO(GLuint dst) {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, verts);
 
-    // pass 1: AO + outline (half-res)
+    if (P.EN_AO) {
     o_BindFB(GL_FRAMEBUFFER, aoFbo);
     glViewport(0, 0, hw, hh);
     glUseProgram(progAO);
@@ -303,6 +304,7 @@ static void drawAO(GLuint dst) {
     glUniform1f(uEdgeS, P.EDGE_S);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+    } else { o_BindFB(GL_FRAMEBUFFER, dst); glViewport(0, 0, scrW, scrH); }
     fxDraw();
     if (oAttr == 0) glDisableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, oBuf);
@@ -317,6 +319,7 @@ static void drawAO(GLuint dst) {
 
 static bool ranOnce = false;
 static void runAO(GLuint dst) {
+    if (!P.EN_ALL) return;
     if (!ranOnce) { ranOnce = true; slog("runAO pertama"); }
     busy = true; drawAO(dst); busy = false;
 }
@@ -405,7 +408,7 @@ static bool inited = false;
 EXPORT int ssao_init(void) {
     if (inited) return 1;
     remove(LOGFILE);
-    P = { 0.1f, 1000.0f, 1.2f, 2.0f, 0.05f, 1.5f, 16.0f, 0.04f, 0.9f, 1.5f, 150.0f, 400.0f, 1, 0.5f, 60.0f, 300.0f, 0.65f, 0.75f, 0.9f, 0.35f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.2f, 1.1f, 0.65f, 0.6f, 1.5f };
+    P = { 0.1f, 1000.0f, 1.2f, 2.0f, 0.05f, 1.5f, 16.0f, 0.04f, 0.9f, 1.5f, 150.0f, 400.0f, 1, 0.5f, 60.0f, 300.0f, 0.65f, 0.75f, 0.9f, 0.35f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.2f, 1.1f, 0.65f, 0.6f, 1.5f, 1, 1, 1, 1 };
     hGLES = dlopen("libGLESv2.so", RTLD_NOW);
     hEGL = dlopen("libEGL.so", RTLD_NOW);
     void* hD = dlopen("libdobby.so", RTLD_NOW | RTLD_GLOBAL);
