@@ -1,5 +1,6 @@
 // libssao.so - SSAO + outline (port ssao_stage14.lua). Hook GL via Dobby.
 #include <stdint.h>
+#include "gothook.h"
 #include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -345,6 +346,7 @@ static void* hGLES = nullptr; static void* hEGL = nullptr;
 static bool hookFn(const char* name, void* repl, void** orig, void* lib) {
     void* a = dlsym(lib, name);
     if (!a) { slog("sym tidak ada: %s", name); return false; }
+    if (lib == hGLES) { bool r = gotHook(a, repl, orig); slog("GOT %s: %s", name, r ? "ok" : "gagal"); return r; }
     if (pDobbyHook(a, repl, orig) != 0) { slog("DobbyHook gagal: %s", name); return false; }
     return true;
 }
@@ -356,6 +358,7 @@ static void installHooks() {
     GLint u = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &u); curFb = u;
     // o_BindFB dipakai sebelum hook terpasang: isi dulu dari dlsym
     o_BindFB = (PFN_BindFB)dlsym(hGLES, "glBindFramebuffer");
+    hookFn("glBindFramebuffer", (void*)h_BindFB, (void**)&o_BindFB, hGLES);
     slog("installHooks selesai");
 }
 
