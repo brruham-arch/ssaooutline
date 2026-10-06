@@ -85,6 +85,7 @@ static bool doAttach() {
         if (f && r && glIsFramebuffer(f) && glIsRenderbuffer(r)) {
             glBindRenderbuffer(GL_RENDERBUFFER, r);
             GLint fm = 0; glGetRenderbufferParameteriv(GL_RENDERBUFFER, 0x8D44, &fm);
+            { GLint ww=0,hh2=0; glGetRenderbufferParameteriv(GL_RENDERBUFFER,0x8D42,&ww); glGetRenderbufferParameteriv(GL_RENDERBUFFER,0x8D43,&hh2); slog("cand fbo=%u att=0x%X rb=%u fmt=0x%X %dx%d", f, a, r, fm, ww, hh2); }
             if (fm == 0x81A6 || fm == 0x81A5) {
                 if (n == 0) fmt0 = fm;
                 if (fm == fmt0) {
@@ -330,6 +331,7 @@ static void h_FbRb(GLenum t, GLenum a, GLenum rbt, GLuint rb) {
 }
 static void h_Clear(GLbitfield m) {
     GLint f = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &f); if ((m & GL_DEPTH_BUFFER_BIT) && isTarget((GLuint)f)) depthCleared = true;
+    { static int cn = 0; if ((m & GL_DEPTH_BUFFER_BIT) && cn < 30 && phase == 1) { cn++; slog("clear depth fbo=%d tgt=%d", f, (int)isTarget((GLuint)f)); } }
     o_Clear(m);
 }
 static void h_BindFB(GLenum t, GLuint f) {
