@@ -27,6 +27,7 @@ struct Params {
     float NEAR, FAR, RADIUS_WORLD, RANGE_WORLD, BIAS_WORLD, STRENGTH, MAX_PX,
           EDGE_T, EDGE_S, EDGE_W, EDGE_FADE0, EDGE_FADE1;
     int FALLBACK_SWAP;
+    float FOG_DENSITY, FOG_START, FOG_END, FOG_R, FOG_G, FOG_B, VIG_STRENGTH, VIG_SOFT, EXPOSURE, TINT_R, TINT_G, TINT_B;
 };
 static Params P;
 
@@ -253,6 +254,7 @@ static void build() {
     shaderSt = 1;
 }
 
+#include "fx.h"
 static const GLenum CAPS[5] = { GL_DEPTH_TEST, GL_BLEND, GL_CULL_FACE, GL_SCISSOR_TEST, GL_STENCIL_TEST };
 
 static void drawAO(GLuint dst) {
@@ -301,6 +303,7 @@ static void drawAO(GLuint dst) {
     glUniform1f(uEdgeS, P.EDGE_S);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+    fxDraw();
     if (oAttr == 0) glDisableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, oBuf);
     glBindTexture(GL_TEXTURE_2D, oTex);
@@ -402,7 +405,7 @@ static bool inited = false;
 EXPORT int ssao_init(void) {
     if (inited) return 1;
     remove(LOGFILE);
-    P = { 0.1f, 1000.0f, 1.2f, 2.0f, 0.05f, 1.5f, 16.0f, 0.04f, 0.9f, 1.5f, 150.0f, 400.0f, 1 };
+    P = { 0.1f, 1000.0f, 1.2f, 2.0f, 0.05f, 1.5f, 16.0f, 0.04f, 0.9f, 1.5f, 150.0f, 400.0f, 1, 0.5f, 60.0f, 300.0f, 0.65f, 0.75f, 0.9f, 0.35f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f };
     hGLES = dlopen("libGLESv2.so", RTLD_NOW);
     hEGL = dlopen("libEGL.so", RTLD_NOW);
     void* hD = dlopen("libdobby.so", RTLD_NOW | RTLD_GLOBAL);
