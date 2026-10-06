@@ -87,7 +87,7 @@ static bool doAttach() {
             GLint fm = 0; glGetRenderbufferParameteriv(GL_RENDERBUFFER, 0x8D44, &fm);
             { GLint ww=0,hh2=0; glGetRenderbufferParameteriv(GL_RENDERBUFFER,0x8D42,&ww); glGetRenderbufferParameteriv(GL_RENDERBUFFER,0x8D43,&hh2); slog("cand fbo=%u att=0x%X rb=%u fmt=0x%X %dx%d", f, a, r, fm, ww, hh2); }
             if (fm == 0x81A6 || fm == 0x81A5) {
-                if (n == 0) fmt0 = fm;
+                fmt0 = 0x81A6;
                 if (fm == fmt0) {
                     tfbo[n] = f; tatt[n] = a; trb[n] = r;
                     glGetRenderbufferParameteriv(GL_RENDERBUFFER, 0x8D42, &u); tw[n] = u;
