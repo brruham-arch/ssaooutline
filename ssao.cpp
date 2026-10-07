@@ -294,20 +294,9 @@ static void drawAO(GLuint dst) {
     glUniform1f(uFade0, P.EDGE_FADE0); glUniform1f(uFade1, P.EDGE_FADE1);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    // pass 2: composite (dst = dst * src)
-    o_BindFB(GL_FRAMEBUFFER, dst);
-    glViewport(0, 0, scrW, scrH);
-    glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_ONE);
-    glUseProgram(progC);
-    glBindTexture(GL_TEXTURE_2D, aoTex);
-    glUniform1i(uAO, 0);
-    glUniform2f(uAoTexel, 1.0f / hw, 1.0f / hh);
-    glUniform1f(uEdgeS, P.EDGE_S);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    } else { o_BindFB(GL_FRAMEBUFFER, dst); glViewport(0, 0, scrW, scrH); }
-    fxDraw();
+    }
+    o_BindFB(GL_FRAMEBUFFER, dst); glViewport(0, 0, scrW, scrH);
+    fxDraw(dst);
     if (oAttr == 0) glDisableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, oBuf);
     glBindTexture(GL_TEXTURE_2D, oTex);
