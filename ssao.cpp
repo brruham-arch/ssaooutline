@@ -15,6 +15,7 @@
 #define EXPORT extern "C" __attribute__((visibility("default")))
 #define LOGFILE "/storage/emulated/0/ssao_log.txt"
 #define START_FRAME 240
+#define AO_DIV 3
 
 static void slog(const char* fmt, ...) {
     char b[512]; va_list a; va_start(a, fmt); vsnprintf(b, sizeof b, fmt, a); va_end(a);
@@ -239,7 +240,7 @@ static void build() {
     uAO = glGetUniformLocation(progC, "uAO");
     uAoTexel = glGetUniformLocation(progC, "uAoTexel");
     uEdgeS = glGetUniformLocation(progC, "uEdgeS");
-    hw = scrW / 2; hh = scrH / 2;
+    hw = scrW / AO_DIV; hh = scrH / AO_DIV;
     GLint oFbo, oTex;
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oFbo); glGetIntegerv(GL_TEXTURE_BINDING_2D, &oTex);
     glGenTextures(1, &aoTex); glBindTexture(GL_TEXTURE_2D, aoTex);
@@ -322,8 +323,7 @@ static void h_FbTex(GLenum t, GLenum a, GLenum ta, GLuint tex, GLint lv) {
 }
 #include "hfbrb.h"
 static void h_Clear(GLbitfield m) {
-    GLint f = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &f); if ((m & GL_DEPTH_BUFFER_BIT) && nT > 0 && (GLuint)f == tfbo[0]) depthCleared = true;
-    { static int cn = 0; if ((m & GL_DEPTH_BUFFER_BIT) && cn < 30 && phase == 1) { cn++; slog("clear depth fbo=%d tgt=%d", f, (int)isTarget((GLuint)f)); } }
+    if ((m & GL_DEPTH_BUFFER_BIT) && nT > 0 && curFb == tfbo[0]) depthCleared = true;
     o_Clear(m);
 }
 static void h_BindFB(GLenum t, GLuint f) {
