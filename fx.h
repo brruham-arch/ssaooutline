@@ -99,7 +99,7 @@ static void fxDraw() {
             || P.TINT_R < 0.999f || P.TINT_G < 0.999f || P.TINT_B < 0.999f;
     bool bOn = P.EN_BLOOM && P.BLOOM_INT > 0.001f;
     if (!P.EN_FX) { cOn = false; fOn = false; }
-    bool dOn = P.EN_FX && P.DOF_AMOUNT > 0.01f; if (dOn) cOn = true;
+    bool dOn = P.EN_FX && P.EN_DOF && P.DOF_AMOUNT > 0.01f; if (dOn) cOn = true;
     if ((!cOn && !bOn) || fxErr >= 3) return;
     void* c = eglGetCurrentContext();
     if (c != fxCtx) { fxCtx = c; fxSt = 0; cTex = 0; blTex[0] = blTex[1] = 0; blFbo[0] = blFbo[1] = 0; cW = cH = 0; fxErr = 0; }
@@ -125,7 +125,7 @@ static void fxDraw() {
     if (cW != scrW || cH != scrH) {
         glBindTexture(GL_TEXTURE_2D, cTex); tp();
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, scrW, scrH, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-        blW = scrW / 4; blH = scrH / 4;
+        blW = scrW / 6; blH = scrH / 6;
         bool ok = true;
         for (int i = 0; i < 2; i++) {
             glBindTexture(GL_TEXTURE_2D, blTex[i]); tp();

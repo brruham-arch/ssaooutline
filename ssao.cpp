@@ -30,6 +30,7 @@ struct Params {
     float FOG_DENSITY, FOG_START, FOG_END, FOG_R, FOG_G, FOG_B, VIG_STRENGTH, VIG_SOFT, EXPOSURE, TINT_R, TINT_G, TINT_B, SATURATION, CONTRAST, BLOOM_THR, BLOOM_INT, BLOOM_RADIUS;
     int EN_ALL, EN_AO, EN_FX, EN_BLOOM;
     float DOF_AMOUNT, DOF_FOCUS, DOF_RANGE;
+    int EN_DOF;
 };
 static Params P;
 
@@ -173,16 +174,16 @@ void main() {
     float idx = mod(fc.x, 4.0) + 4.0 * mod(fc.y, 4.0);
     float rot = idx * 0.3926991;
     float occ = 0.0;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 4; i++) {
         float fi = float(i);
         float a = rot + fi * 2.399963;
-        float r = sqrt((fi + 0.5) / 6.0) * rpx;
+        float r = sqrt((fi + 0.5) / 4.0) * rpx;
         vec2 uv = vUv + vec2(cos(a), sin(a)) * r * uTexel;
         float zs = lin(texture2D(uDepth, uv).r);
         float diff = zc - zs;
         if (diff > uBias && diff < uRange) occ += 1.0 - diff / uRange;
     }
-    float ao = clamp(1.0 - uStrength * occ / 6.0, 0.0, 1.0);
+    float ao = clamp(1.0 - uStrength * occ / 4.0, 0.0, 1.0);
     gl_FragColor = vec4(ao, edge, 0.0, 1.0);
 }
 )GLSL";
@@ -409,7 +410,7 @@ static bool inited = false;
 EXPORT int ssao_init(void) {
     if (inited) return 1;
     remove(LOGFILE);
-    P = { 0.1f, 1000.0f, 1.2f, 2.0f, 0.05f, 1.5f, 16.0f, 0.04f, 0.9f, 1.5f, 150.0f, 400.0f, 1, 0.5f, 60.0f, 300.0f, 0.65f, 0.75f, 0.9f, 0.35f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.2f, 1.1f, 0.65f, 0.6f, 1.5f, 1, 1, 1, 1, 4.0f, 8.0f, 12.0f };
+    P = { 0.1f, 1000.0f, 1.2f, 2.0f, 0.05f, 1.5f, 16.0f, 0.04f, 0.9f, 1.5f, 150.0f, 400.0f, 1, 0.5f, 60.0f, 300.0f, 0.65f, 0.75f, 0.9f, 0.35f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.2f, 1.1f, 0.65f, 0.6f, 1.5f, 1, 1, 1, 1, 4.0f, 8.0f, 12.0f, 1 };
     hGLES = dlopen("libGLESv2.so", RTLD_NOW);
     hEGL = dlopen("libEGL.so", RTLD_NOW);
     void* hD = dlopen("libdobby.so", RTLD_NOW | RTLD_GLOBAL);
