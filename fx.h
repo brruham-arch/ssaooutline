@@ -23,7 +23,7 @@ void main() {
         for (int i = 0; i < 8; i++) {
             float a = float(i) * 0.785398;
             float r = mod(float(i), 2.0) > 0.5 ? 1.0 : 0.55;
-            s += texture2D(uScene, vUv + vec2(cos(a), sin(a)) * r * coc * uPx).rgb;
+            s += texture2D(uScene, vUv + vec2(cos(a), sin(a)) * r * coc * 3.0 * uPx).rgb;
         }
         c = s / 9.0;
     }
