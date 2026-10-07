@@ -32,6 +32,7 @@ struct Params {
     int EN_ALL, EN_AO, EN_FX, EN_BLOOM;
     float DOF_AMOUNT, DOF_FOCUS, DOF_RANGE;
     int EN_DOF;
+    float SPLIT_AMOUNT, SH_R, SH_G, SH_B, HI_R, HI_G, HI_B, TONEMAP, TEMP;
 };
 static Params P;
 
@@ -393,7 +394,7 @@ static bool inited = false;
 EXPORT int ssao_init(void) {
     if (inited) return 1;
     remove(LOGFILE);
-    P = { 0.1f, 1000.0f, 1.2f, 2.0f, 0.05f, 1.5f, 16.0f, 0.04f, 0.9f, 1.5f, 150.0f, 400.0f, 1, 0.5f, 60.0f, 300.0f, 0.65f, 0.75f, 0.9f, 0.35f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.2f, 1.1f, 0.65f, 0.6f, 1.5f, 1, 1, 1, 0, 4.0f, 8.0f, 12.0f, 0 };
+    P = { 0.1f, 1000.0f, 1.2f, 2.0f, 0.05f, 1.5f, 16.0f, 0.04f, 0.9f, 1.5f, 150.0f, 400.0f, 1, 0.5f, 60.0f, 300.0f, 0.65f, 0.75f, 0.9f, 0.35f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.2f, 1.1f, 0.65f, 0.6f, 1.5f, 1, 1, 1, 0, 4.0f, 8.0f, 12.0f, 0, 0.0f, 0.55f, 0.75f, 1.0f, 1.0f, 0.8f, 0.6f, 0.0f, 0.0f };
     hGLES = dlopen("libGLESv2.so", RTLD_NOW);
     hEGL = dlopen("libEGL.so", RTLD_NOW);
     void* hD = dlopen("libdobby.so", RTLD_NOW | RTLD_GLOBAL);

@@ -4,6 +4,7 @@ static GLuint pAll, pBr, pBl, cTex, blTex[2], blFbo[2];
 static int fxSt = 0, cW = 0, cH = 0, blW = 0, blH = 0, fxErr = 0; static void* fxCtx = nullptr;
 static GLint aScene, aDepth, aAO, aBloom, aNear, aFar, aDens, aStart, aEnd, aSat, aCon, aVig, aSoft, aExp,
              aFogCol, aTint, aDof, aFocus, aFR, aPx, aAoOn, aAoTexel, aEdgeS, aBloomI;
+static GLint aSplit, aSh, aHi, aTone, aTemp;
 static GLint bScene, bTexel, bThr, lTex, lDir;
 
 static const char* FS_ALL = R"GLSL(
@@ -12,6 +13,8 @@ varying vec2 vUv;
 uniform sampler2D uScene, uDepth, uAO, uBloom;
 uniform highp float uNear, uFar;
 uniform float uDens, uStart, uEnd, uSat, uCon, uVig, uSoft, uExp;
+uniform float uSplit, uTone, uTemp;
+uniform vec3 uSh, uHi;
 uniform float uAoOn, uEdgeS, uBloomI, uDof, uFocus, uFRange;
 uniform vec3 uFogCol, uTint;
 uniform vec2 uPx, uAoTexel;
@@ -51,8 +54,19 @@ void main() {
     float l = dot(c, vec3(0.299, 0.587, 0.114));
     c = mix(vec3(l), c, uSat);
     c = (c - 0.5) * uCon + 0.5;
+    if (uSplit > 0.0) {
+        float lm = dot(c, vec3(0.299, 0.587, 0.114));
+        vec3 t = mix(uSh, uHi, smoothstep(0.2, 0.8, lm));
+        t /= max(dot(t, vec3(0.299, 0.587, 0.114)), 0.001);
+        c = mix(c, c * t, uSplit);
+    }
+    c *= vec3(1.0 + uTemp * 0.15, 1.0, 1.0 - uTemp * 0.15);
     float dv = length(vUv - 0.5) * 1.4142;
     c *= uTint * uExp * (1.0 - uVig * smoothstep(uSoft, 1.0, dv));
+    if (uTone > 0.0) {
+        vec3 a = (c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14);
+        c = mix(c, a, uTone);
+    }
     c = clamp(c, 0.0, 1.0);
     if (uBloomI > 0.0) c += texture2D(uBloom, vUv).rgb * uBloomI;
     gl_FragColor = vec4(min(c, 1.0), 1.0);
@@ -105,7 +119,7 @@ static void fxDraw(GLuint dst) {
     bool fOn = fxOn && P.FOG_DENSITY > 0.001f;
     bool dOn = fxOn && P.EN_DOF && P.DOF_AMOUNT > 0.01f;
     bool gOn = fxOn && (fOn || fabsf(P.SATURATION - 1.0f) > 0.001f || fabsf(P.CONTRAST - 1.0f) > 0.001f
-            || P.VIG_STRENGTH > 0.001f || fabsf(P.EXPOSURE - 1.0f) > 0.001f
+            || P.VIG_STRENGTH > 0.001f || P.SPLIT_AMOUNT > 0.001f || P.TONEMAP > 0.001f || fabsf(P.TEMP) > 0.001f || fabsf(P.EXPOSURE - 1.0f) > 0.001f
             || fabsf(P.TINT_R - 1.0f) > 0.001f || fabsf(P.TINT_G - 1.0f) > 0.001f || fabsf(P.TINT_B - 1.0f) > 0.001f);
     bool bOn = P.EN_BLOOM && P.BLOOM_INT > 0.001f;
     if (!(aoOn || gOn || dOn || bOn) || fxErr >= 3) return;
@@ -119,7 +133,7 @@ static void fxDraw(GLuint dst) {
         UA(aNear,"uNear"); UA(aFar,"uFar"); UA(aDens,"uDens"); UA(aStart,"uStart"); UA(aEnd,"uEnd");
         UA(aSat,"uSat"); UA(aCon,"uCon"); UA(aVig,"uVig"); UA(aSoft,"uSoft"); UA(aExp,"uExp");
         UA(aFogCol,"uFogCol"); UA(aTint,"uTint"); UA(aDof,"uDof"); UA(aFocus,"uFocus"); UA(aFR,"uFRange");
-        UA(aPx,"uPx"); UA(aAoOn,"uAoOn"); UA(aAoTexel,"uAoTexel"); UA(aEdgeS,"uEdgeS"); UA(aBloomI,"uBloomI");
+        UA(aPx,"uPx"); UA(aSplit,"uSplit"); UA(aSh,"uSh"); UA(aHi,"uHi"); UA(aTone,"uTone"); UA(aTemp,"uTemp"); UA(aAoOn,"uAoOn"); UA(aAoTexel,"uAoTexel"); UA(aEdgeS,"uEdgeS"); UA(aBloomI,"uBloomI");
         bScene = glGetUniformLocation(pBr, "uScene"); bTexel = glGetUniformLocation(pBr, "uTexel");
         bThr = glGetUniformLocation(pBr, "uThr");
         lTex = glGetUniformLocation(pBl, "uTex"); lDir = glGetUniformLocation(pBl, "uDir");
@@ -194,6 +208,9 @@ static void fxDraw(GLuint dst) {
     glUniform2f(aPx, 1.0f / scrW, 1.0f / scrH);
     glUniform1f(aAoOn, aoOn ? 1.0f : 0.0f); glUniform2f(aAoTexel, 1.0f / hw, 1.0f / hh); glUniform1f(aEdgeS, P.EDGE_S);
     glUniform1f(aBloomI, bOn ? P.BLOOM_INT : 0.0f);
+    glUniform1f(aSplit, fxOn ? P.SPLIT_AMOUNT : 0.0f); glUniform1f(aTone, fxOn ? P.TONEMAP : 0.0f);
+    glUniform1f(aTemp, fxOn ? P.TEMP : 0.0f);
+    glUniform3f(aSh, P.SH_R, P.SH_G, P.SH_B); glUniform3f(aHi, P.HI_R, P.HI_G, P.HI_B);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     for (int u = 1; u < 4; u++) if (need[u]) {
         glActiveTexture(GL_TEXTURE0 + u);
