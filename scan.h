@@ -1,5 +1,5 @@
 #pragma once
-static bool scanned = false;
+static int scanN = 0;
 static void scanExisting() {
     GLint old = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old);
     int found = 0;

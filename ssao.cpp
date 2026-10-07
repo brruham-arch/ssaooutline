@@ -380,7 +380,7 @@ static EGLBoolean h_Swap(EGLDisplay d, EGLSurface s) {
     checkCtx();
     frame++;
     if (phase == 0) {
-        if (frame >= START_FRAME && nrec == 0 && !scanned) { scanned = true; busy = true; scanExisting(); busy = false; }
+        if (frame >= START_FRAME && scanN < 6 && frame % 90 == 0) { scanN++; busy = true; scanExisting(); busy = false; }
         if (frame >= START_FRAME && nrec > 0) {
             busy = true; bool ok = doAttach(); busy = false;
             if (ok) {
