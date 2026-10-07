@@ -161,16 +161,6 @@ void main() {
     float d0 = texture2D(uDepth, vUv).r;
     if (d0 >= 0.99999) { gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0); return; }
     float zc = lin(d0);
-    float edge = 0.0;
-    if (zc < uFade1) {
-        vec2 t = uTexel * uEdgeW;
-        float zl = lin(texture2D(uDepth, vUv - vec2(t.x, 0.0)).r);
-        float zr = lin(texture2D(uDepth, vUv + vec2(t.x, 0.0)).r);
-        float zu = lin(texture2D(uDepth, vUv + vec2(0.0, t.y)).r);
-        float zd = lin(texture2D(uDepth, vUv - vec2(0.0, t.y)).r);
-        float e = max(abs(zl + zr - 2.0 * zc), abs(zu + zd - 2.0 * zc)) / zc;
-        edge = smoothstep(uEdgeT, uEdgeT * 2.0, e) * (1.0 - smoothstep(uFade0, uFade1, zc));
-    }
     float rpx = clamp(uRadius * 770.0 / zc, 3.0, uMaxPx);
     vec2 fc = floor(gl_FragCoord.xy);
     float idx = mod(fc.x, 4.0) + 4.0 * mod(fc.y, 4.0);
@@ -186,7 +176,7 @@ void main() {
         if (diff > uBias && diff < uRange) occ += 1.0 - diff / uRange;
     }
     float ao = clamp(1.0 - uStrength * occ / 4.0, 0.0, 1.0);
-    gl_FragColor = vec4(ao, edge, 0.0, 1.0);
+    gl_FragColor = vec4(ao, 0.0, 0.0, 1.0);
 }
 )GLSL";
 

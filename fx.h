@@ -4,6 +4,7 @@ static GLuint pAll, pBr, pBl, cTex, blTex[2], blFbo[2];
 static int fxSt = 0, cW = 0, cH = 0, blW = 0, blH = 0, fxErr = 0; static void* fxCtx = nullptr;
 static GLint aScene, aDepth, aAO, aBloom, aNear, aFar, aDens, aStart, aEnd, aSat, aCon, aVig, aSoft, aExp,
              aFogCol, aTint, aDof, aFocus, aFR, aPx, aAoOn, aAoTexel, aEdgeS, aBloomI;
+static GLint aEdgeT, aEdgeW, aFade0, aFade1;
 static GLint aSplit, aSh, aHi, aTone, aTemp;
 static GLint bScene, bTexel, bThr, lTex, lDir;
 
@@ -14,6 +15,7 @@ uniform sampler2D uScene, uDepth, uAO, uBloom;
 uniform highp float uNear, uFar;
 uniform float uDens, uStart, uEnd, uSat, uCon, uVig, uSoft, uExp;
 uniform float uSplit, uTone, uTemp;
+uniform float uEdgeT, uEdgeW, uFade0, uFade1;
 uniform vec3 uSh, uHi;
 uniform float uAoOn, uEdgeS, uBloomI, uDof, uFocus, uFRange;
 uniform vec3 uFogCol, uTint;
@@ -25,7 +27,7 @@ void main() {
     vec3 c = texture2D(uScene, vUv).rgb;
     bool sky = true;
     highp float z = uFar;
-    if (uDens > 0.0 || uDof > 0.0) {
+    if (uDens > 0.0 || uDof > 0.0 || uEdgeS > 0.0) {
         highp float d = texture2D(uDepth, vUv).r;
         if (d < 0.99999) { sky = false; z = lin(d); }
     }
@@ -47,8 +49,17 @@ void main() {
                   + texture2D(uAO, vUv + vec2(-o.x,  o.y)).r
                   + texture2D(uAO, vUv + vec2( o.x, -o.y)).r
                   + texture2D(uAO, vUv + vec2(-o.x, -o.y)).r) * 0.25;
-        float edge = texture2D(uAO, vUv).g * uEdgeS;
-        c *= ao * (1.0 - edge);
+        float edge = 0.0;
+        if (uEdgeS > 0.0 && !sky && z < uFade1) {
+            vec2 t = uPx * uEdgeW;
+            highp float zl = lin(texture2D(uDepth, vUv - vec2(t.x, 0.0)).r);
+            highp float zr = lin(texture2D(uDepth, vUv + vec2(t.x, 0.0)).r);
+            highp float zu = lin(texture2D(uDepth, vUv + vec2(0.0, t.y)).r);
+            highp float zd = lin(texture2D(uDepth, vUv - vec2(0.0, t.y)).r);
+            highp float e = max(abs(zl + zr - 2.0 * z), abs(zu + zd - 2.0 * z)) / z;
+            edge = smoothstep(uEdgeT, uEdgeT * 2.0, e) * (1.0 - smoothstep(uFade0, uFade1, z));
+        }
+        c *= ao * (1.0 - edge * uEdgeS);
     }
     if (uDens > 0.0 && !sky) c = mix(c, uFogCol, uDens * smoothstep(uStart, uEnd, z));
     float l = dot(c, vec3(0.299, 0.587, 0.114));
@@ -133,7 +144,7 @@ static void fxDraw(GLuint dst) {
         UA(aNear,"uNear"); UA(aFar,"uFar"); UA(aDens,"uDens"); UA(aStart,"uStart"); UA(aEnd,"uEnd");
         UA(aSat,"uSat"); UA(aCon,"uCon"); UA(aVig,"uVig"); UA(aSoft,"uSoft"); UA(aExp,"uExp");
         UA(aFogCol,"uFogCol"); UA(aTint,"uTint"); UA(aDof,"uDof"); UA(aFocus,"uFocus"); UA(aFR,"uFRange");
-        UA(aPx,"uPx"); UA(aSplit,"uSplit"); UA(aSh,"uSh"); UA(aHi,"uHi"); UA(aTone,"uTone"); UA(aTemp,"uTemp"); UA(aAoOn,"uAoOn"); UA(aAoTexel,"uAoTexel"); UA(aEdgeS,"uEdgeS"); UA(aBloomI,"uBloomI");
+        UA(aPx,"uPx"); UA(aEdgeT,"uEdgeT"); UA(aEdgeW,"uEdgeW"); UA(aFade0,"uFade0"); UA(aFade1,"uFade1"); UA(aSplit,"uSplit"); UA(aSh,"uSh"); UA(aHi,"uHi"); UA(aTone,"uTone"); UA(aTemp,"uTemp"); UA(aAoOn,"uAoOn"); UA(aAoTexel,"uAoTexel"); UA(aEdgeS,"uEdgeS"); UA(aBloomI,"uBloomI");
         bScene = glGetUniformLocation(pBr, "uScene"); bTexel = glGetUniformLocation(pBr, "uTexel");
         bThr = glGetUniformLocation(pBr, "uThr");
         lTex = glGetUniformLocation(pBl, "uTex"); lDir = glGetUniformLocation(pBl, "uDir");
@@ -185,7 +196,8 @@ static void fxDraw(GLuint dst) {
     glBindFramebuffer(GL_FRAMEBUFFER, dst);
     glViewport(0, 0, scrW, scrH);
 
-    bool need[4] = { false, fOn || dOn, aoOn, bOn };
+    bool eOn = aoOn && P.EDGE_S > 0.001f;
+    bool need[4] = { false, fOn || dOn || eOn, aoOn, bOn };
     GLuint tx[4] = { 0, depthTex[0], aoTex, blTex[0] };
     GLint o[4] = { 0, 0, 0, 0 };
     for (int u = 1; u < 4; u++) if (need[u]) {
@@ -206,7 +218,9 @@ static void fxDraw(GLuint dst) {
     if (fxOn) glUniform3f(aTint, P.TINT_R, P.TINT_G, P.TINT_B); else glUniform3f(aTint, 1.0f, 1.0f, 1.0f);
     glUniform1f(aDof, dOn ? P.DOF_AMOUNT : 0.0f); glUniform1f(aFocus, P.DOF_FOCUS); glUniform1f(aFR, P.DOF_RANGE);
     glUniform2f(aPx, 1.0f / scrW, 1.0f / scrH);
-    glUniform1f(aAoOn, aoOn ? 1.0f : 0.0f); glUniform2f(aAoTexel, 1.0f / hw, 1.0f / hh); glUniform1f(aEdgeS, P.EDGE_S);
+    glUniform1f(aAoOn, aoOn ? 1.0f : 0.0f); glUniform2f(aAoTexel, 1.0f / hw, 1.0f / hh); glUniform1f(aEdgeS, eOn ? P.EDGE_S : 0.0f);
+    glUniform1f(aEdgeT, P.EDGE_T); glUniform1f(aEdgeW, P.EDGE_W);
+    glUniform1f(aFade0, P.EDGE_FADE0); glUniform1f(aFade1, P.EDGE_FADE1);
     glUniform1f(aBloomI, bOn ? P.BLOOM_INT : 0.0f);
     glUniform1f(aSplit, fxOn ? P.SPLIT_AMOUNT : 0.0f); glUniform1f(aTone, fxOn ? P.TONEMAP : 0.0f);
     glUniform1f(aTemp, fxOn ? P.TEMP : 0.0f);
