@@ -373,14 +373,12 @@ static void installHooks() {
     slog("installHooks selesai");
 }
 
-#include "scan.h"
 static EGLBoolean h_Swap(EGLDisplay d, EGLSurface s) {
     if (!o_Swap) return EGL_TRUE;
     if (!hooksDone) { hooksDone = true; slog("frame pertama"); installHooks(); }
     checkCtx();
     frame++;
     if (phase == 0) {
-        if (frame >= START_FRAME && scanN < 6 && frame % 90 == 0) { scanN++; busy = true; scanExisting(); busy = false; }
         if (frame >= START_FRAME && nrec > 0) {
             busy = true; bool ok = doAttach(); busy = false;
             if (ok) {
