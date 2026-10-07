@@ -83,13 +83,13 @@ static bool doAttach() {
     glGetIntegerv(GL_RENDERBUFFER_BINDING, &oldRb);
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldTex);
     int n = 0; GLint fmt0 = 0;
+    for (int i = 0; i < nT; i++) { bool d = false; for (int j = 0; j < i; j++) if (depthTex[j] == depthTex[i]) d = true; if (!d && depthTex[i]) glDeleteTextures(1, &depthTex[i]); depthTex[i] = 0; }
     for (int i = 0; i < nrec; i++) {
         if (rec[i*4] != 2 || n >= 32) continue;
         GLuint f = rec[i*4+1], a = rec[i*4+2], r = rec[i*4+3];
         if (f && r && glIsFramebuffer(f) && glIsRenderbuffer(r)) {
             glBindRenderbuffer(GL_RENDERBUFFER, r);
             GLint fm = 0; glGetRenderbufferParameteriv(GL_RENDERBUFFER, 0x8D44, &fm);
-            { GLint ww=0,hh2=0; glGetRenderbufferParameteriv(GL_RENDERBUFFER,0x8D42,&ww); glGetRenderbufferParameteriv(GL_RENDERBUFFER,0x8D43,&hh2); slog("cand fbo=%u att=0x%X rb=%u fmt=0x%X %dx%d", f, a, r, fm, ww, hh2); }
             if (fm == 0x81A6 || fm == 0x81A5) {
                 fmt0 = 0x81A6;
                 if (fm == fmt0) {
@@ -331,13 +331,7 @@ static void h_FbTex(GLenum t, GLenum a, GLenum ta, GLuint tex, GLint lv) {
     if (isDepth(a)) record(1, a, tex);
     o_FbTex(t, a, ta, tex, lv);
 }
-static void h_FbRb(GLenum t, GLenum a, GLenum rbt, GLuint rb) {
-    if (isDepth(a) && rb != 0) {
-        record(2, a, rb);
-        if (phase == 1) { phase = 0; frame = START_FRAME - 20; slog("depth di-reattach game, attach ulang"); }
-    }
-    o_FbRb(t, a, rbt, rb);
-}
+#include "hfbrb.h"
 static void h_Clear(GLbitfield m) {
     GLint f = 0; glGetIntegerv(GL_FRAMEBUFFER_BINDING, &f); if ((m & GL_DEPTH_BUFFER_BIT) && nT > 0 && (GLuint)f == tfbo[0]) depthCleared = true;
     { static int cn = 0; if ((m & GL_DEPTH_BUFFER_BIT) && cn < 30 && phase == 1) { cn++; slog("clear depth fbo=%d tgt=%d", f, (int)isTarget((GLuint)f)); } }
