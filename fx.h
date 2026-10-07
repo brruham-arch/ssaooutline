@@ -3,6 +3,7 @@
 static GLuint pAll, pBr, pBl, pAd, cTex, blTex[2], blFbo[2];
 static int fxSt = 0, cW = 0, cH = 0, blW = 0, blH = 0, fxErr = 0; static void* fxCtx = nullptr;
 static GLint aScene, aDepth, aNear, aFar, aDens, aStart, aEnd, aSat, aCon, aVig, aSoft, aExp, aFogCol, aTint;
+static GLint aDof, aFocus, aFR, aPx;
 static GLint bScene, bTexel, bThr, lTex, lDir, dTex, dInt;
 
 static const char* FS_ALL = R"GLSL(
@@ -11,8 +12,21 @@ varying vec2 vUv;
 uniform sampler2D uScene, uDepth;
 uniform float uNear, uFar, uDens, uStart, uEnd, uSat, uCon, uVig, uSoft, uExp;
 uniform vec3 uFogCol, uTint;
+uniform float uDof, uFocus, uFRange; uniform vec2 uPx;
 void main() {
+    float d0 = texture2D(uDepth, vUv).r;
+    float z0 = d0 >= 0.99999 ? uFar : 2.0 * uNear * uFar / (uFar + uNear - (d0 * 2.0 - 1.0) * (uFar - uNear));
+    float coc = uDof * clamp((abs(z0 - uFocus) - uFRange) / uFRange, 0.0, 1.0);
     vec3 c = texture2D(uScene, vUv).rgb;
+    if (uDof > 0.0 && coc > 0.5) {
+        vec3 s = c;
+        for (int i = 0; i < 8; i++) {
+            float a = float(i) * 0.785398;
+            float r = mod(float(i), 2.0) > 0.5 ? 1.0 : 0.55;
+            s += texture2D(uScene, vUv + vec2(cos(a), sin(a)) * r * coc * uPx).rgb;
+        }
+        c = s / 9.0;
+    }
     if (uDens > 0.0) {
         float d = texture2D(uDepth, vUv).r;
         if (d < 0.99999) {
@@ -85,6 +99,7 @@ static void fxDraw() {
             || P.TINT_R < 0.999f || P.TINT_G < 0.999f || P.TINT_B < 0.999f;
     bool bOn = P.EN_BLOOM && P.BLOOM_INT > 0.001f;
     if (!P.EN_FX) { cOn = false; fOn = false; }
+    bool dOn = P.EN_FX && P.DOF_AMOUNT > 0.01f; if (dOn) cOn = true;
     if ((!cOn && !bOn) || fxErr >= 3) return;
     void* c = eglGetCurrentContext();
     if (c != fxCtx) { fxCtx = c; fxSt = 0; cTex = 0; blTex[0] = blTex[1] = 0; blFbo[0] = blFbo[1] = 0; cW = cH = 0; fxErr = 0; }
@@ -95,7 +110,8 @@ static void fxDraw() {
         #define UA(v, n) v = glGetUniformLocation(pAll, n)
         UA(aScene,"uScene"); UA(aDepth,"uDepth"); UA(aNear,"uNear"); UA(aFar,"uFar"); UA(aDens,"uDens");
         UA(aStart,"uStart"); UA(aEnd,"uEnd"); UA(aSat,"uSat"); UA(aCon,"uCon"); UA(aVig,"uVig");
-        UA(aSoft,"uSoft"); UA(aExp,"uExp"); UA(aFogCol,"uFogCol"); UA(aTint,"uTint");
+        UA(aSoft,"uSoft");
+        aDof = glGetUniformLocation(pAll, "uDof"); aFocus = glGetUniformLocation(pAll, "uFocus"); aFR = glGetUniformLocation(pAll, "uFRange"); aPx = glGetUniformLocation(pAll, "uPx"); UA(aExp,"uExp"); UA(aFogCol,"uFogCol"); UA(aTint,"uTint");
         bScene = glGetUniformLocation(pBr, "uScene"); bTexel = glGetUniformLocation(pBr, "uTexel");
         bThr = glGetUniformLocation(pBr, "uThr");
         lTex = glGetUniformLocation(pBl, "uTex"); lDir = glGetUniformLocation(pBl, "uDir");
@@ -153,7 +169,7 @@ static void fxDraw() {
         glUseProgram(pAll);
         glBindTexture(GL_TEXTURE_2D, cTex);
         GLint o1 = 0;
-        if (fOn) {
+        if (fOn || dOn) {
             glActiveTexture(GL_TEXTURE1);
             glGetIntegerv(GL_TEXTURE_BINDING_2D, &o1);
             glBindTexture(GL_TEXTURE_2D, depthTex[0]);
@@ -165,8 +181,9 @@ static void fxDraw() {
         glUniform1f(aSat, P.SATURATION); glUniform1f(aCon, P.CONTRAST);
         glUniform1f(aVig, P.VIG_STRENGTH); glUniform1f(aSoft, P.VIG_SOFT); glUniform1f(aExp, P.EXPOSURE);
         glUniform3f(aFogCol, P.FOG_R, P.FOG_G, P.FOG_B); glUniform3f(aTint, P.TINT_R, P.TINT_G, P.TINT_B);
+        glUniform1f(aDof, dOn ? P.DOF_AMOUNT : 0.0f); glUniform1f(aFocus, P.DOF_FOCUS); glUniform1f(aFR, P.DOF_RANGE); glUniform2f(aPx, 1.0f / scrW, 1.0f / scrH);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        if (fOn) {
+        if (fOn || dOn) {
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, o1);
             glActiveTexture(GL_TEXTURE0);
