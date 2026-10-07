@@ -373,12 +373,14 @@ static void installHooks() {
     slog("installHooks selesai");
 }
 
+#include "scan.h"
 static EGLBoolean h_Swap(EGLDisplay d, EGLSurface s) {
     if (!o_Swap) return EGL_TRUE;
     if (!hooksDone) { hooksDone = true; slog("frame pertama"); installHooks(); }
     checkCtx();
     frame++;
     if (phase == 0) {
+        if (frame >= START_FRAME && nrec == 0 && !scanned) { scanned = true; busy = true; scanExisting(); busy = false; }
         if (frame >= START_FRAME && nrec > 0) {
             busy = true; bool ok = doAttach(); busy = false;
             if (ok) {
@@ -410,7 +412,7 @@ static bool inited = false;
 EXPORT int ssao_init(void) {
     if (inited) return 1;
     remove(LOGFILE);
-    P = { 0.1f, 1000.0f, 1.2f, 2.0f, 0.05f, 1.5f, 16.0f, 0.04f, 0.9f, 1.5f, 150.0f, 400.0f, 1, 0.5f, 60.0f, 300.0f, 0.65f, 0.75f, 0.9f, 0.35f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.2f, 1.1f, 0.65f, 0.6f, 1.5f, 1, 1, 1, 1, 4.0f, 8.0f, 12.0f, 1 };
+    P = { 0.1f, 1000.0f, 1.2f, 2.0f, 0.05f, 1.5f, 16.0f, 0.04f, 0.9f, 1.5f, 150.0f, 400.0f, 1, 0.5f, 60.0f, 300.0f, 0.65f, 0.75f, 0.9f, 0.35f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.2f, 1.1f, 0.65f, 0.6f, 1.5f, 1, 1, 1, 0, 4.0f, 8.0f, 12.0f, 0 };
     hGLES = dlopen("libGLESv2.so", RTLD_NOW);
     hEGL = dlopen("libEGL.so", RTLD_NOW);
     void* hD = dlopen("libdobby.so", RTLD_NOW | RTLD_GLOBAL);
